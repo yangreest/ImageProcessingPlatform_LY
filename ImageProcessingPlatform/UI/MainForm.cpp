@@ -14,6 +14,7 @@
 #include <QBuffer>
 #include <QFileDialog>
 #include <QSettings>
+#include <QToolTip>
 
 #include "AlertForm.h"
 #include "CloseEventFilter.h"
@@ -1418,6 +1419,7 @@ void MainForm::InitParam()
 			std::placeholders::_1,
 			std::placeholders::_2, std::placeholders::_3));
 		pWHSDControlBoardProtocol->RegisterXRaySendResult(xRayResult);
+		pWHSDControlBoardProtocol->RegisterSetEncoderZero(std::bind(&MainForm::Callback_SetEncoderZero,this));
 		pDeviceCom->BeginWork();
 		pWHSDControlBoardProtocol->BeginWork();
 	}
@@ -1535,6 +1537,12 @@ void MainForm::Callback_XRaySendResult(uint8_t re)
 			On_ManuallyTrigger_Clicked();
 		}
 	}
+}
+
+void MainForm::Callback_SetEncoderZero()
+{
+	//给pushButton_60 设置提示气泡 
+    QToolTip::showText(ui.pushButton_60->mapToGlobal(QPoint(0, 0)), "编码器归零成功");
 }
 
 bool MainForm::CheckPassword()

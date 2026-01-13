@@ -168,6 +168,8 @@ private:
 
 	void Callback_XRaySendResult(uint8_t re);
 
+	void Callback_SetEncoderZero();
+
 	void InitUI(int model);
 
 	void SetAllVis(bool v);

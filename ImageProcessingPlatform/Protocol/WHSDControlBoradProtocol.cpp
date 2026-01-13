@@ -161,6 +161,7 @@ CWHSDControlBoardProtocol::CWHSDControlBoardProtocol(uint16_t wHeartBeatTime)
 	m_cCmd = 0;
 	m_nIsNeedExit = false;
 	m_function_WriteLogCallBack = nullptr;
+	m_function_SetEncoderZero = nullptr;
 	m_wHeartBeatTime = wHeartBeatTime;
 	m_bPauseHeartBeat = false;
 	m_cOTAStatus = 0;
@@ -303,7 +304,12 @@ bool CWHSDControlBoardProtocol::Parse()
 						// 设置原点的回包
 						if (m_vectorCmdData[0] > 0x00)
 						{
-								
+							if (m_function_SetEncoderZero != nullptr)
+							{
+								// 执行回调函数
+								m_function_SetEncoderZero();
+							}
+							
 						}
 					}
 					default:
@@ -353,6 +359,11 @@ void CWHSDControlBoardProtocol::RegisterXRaySendResult(const std::function<void(
 	m_function_XRaySendResult = f;
 }
 
+void CWHSDControlBoardProtocol::RegisterSetEncoderZero(const std::function<void(void)>& f)
+{
+    m_function_SetEncoderZero = f;
+}
+
 void CWHSDControlBoardProtocol::BeginOTA(const std::vector<uint8_t>& file)
 {
 	m_vector_OTAFile = file;
@@ -363,6 +374,10 @@ void CWHSDControlBoardProtocol::BeginOTA(const std::vector<uint8_t>& file)
 std::vector<uint8_t> CWHSDControlBoardProtocol::DeviceRun(uint8_t target, uint8_t enable, uint8_t runMode,
 	uint8_t speed)
 {
+	if (speed < 1)
+	{
+		speed = 1;
+	}
 	return GetCmdData(0x05, { target, enable, runMode, speed });
 }
 

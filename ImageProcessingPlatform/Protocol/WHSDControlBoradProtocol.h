@@ -166,6 +166,8 @@ public:
 
 	void RegisterXRaySendResult(const std::function<void(uint8_t)>& f);
 
+	void RegisterSetEncoderZero(const std::function<void(void)>& f);
+
 	void BeginOTA(const std::vector<uint8_t>& file);
 
 	uint8_t m_cPackNumber;
@@ -234,6 +236,8 @@ private:
 	std::function<void(uint8_t, uint32_t, uint32_t)> m_function_OTAStatusCallBack;
 
 	std::function<void(uint8_t)> m_function_XRaySendResult;
+
+	std::function<void(void)> m_function_SetEncoderZero;
 
 	std::vector<uint8_t> m_vectorCmdData;
 
