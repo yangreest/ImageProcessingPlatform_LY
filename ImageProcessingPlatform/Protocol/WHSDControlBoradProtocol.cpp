@@ -301,12 +301,9 @@ bool CWHSDControlBoardProtocol::Parse()
 					case 0x15:
 					{
 						// 设置原点的回包
-						if (m_vectorCmdData.size() >= 5)
+						if (m_vectorCmdData[0] > 0x00)
 						{
-							if (m_vectorCmdData[0] > 0x00)
-							{
 								
-							}
 						}
 					}
 					default:
