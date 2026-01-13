@@ -12,7 +12,9 @@ CameraFrom::CameraFrom(const CConfigManager* nConfig, QWidget* parent)
 	this->setWindowFlags(this->windowFlags() | Qt::WindowStaysOnTopHint);
 
 	setWindowTitle("摄像头预览");
-
+	ui.label_2->setVisible(false);
+	ui.label_3->setVisible(false);
+	this->resize(600, 500);
 	QIcon appIcon("./1.png");
 	if (!appIcon.isNull())
 	{

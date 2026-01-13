@@ -297,6 +297,18 @@ bool CWHSDControlBoardProtocol::Parse()
 						//}
 						break;
 					}
+
+					case 0x15:
+					{
+						// 设置原点的回包
+						if (m_vectorCmdData.size() >= 5)
+						{
+							if (m_vectorCmdData[0] > 0x00)
+							{
+								
+							}
+						}
+					}
 					default:
 					{
 						break;
@@ -597,6 +609,9 @@ void CWHSDControlBoardProtocol::DealHeartBeat()
 		m_memDeviceHeartBeat.m_cXRayDeviceStatus = m_vectorCmdData[21];
 		m_memDeviceHeartBeat.m_cMainPowerSupply = m_vectorCmdData[22];
 		m_memDeviceHeartBeat.m_bFactoryMode = TOOLS_GET_BIT(m_vectorCmdData[23], 0) > 0;
+		//m_vectorCmdData[24] 是高8位，m_vectorCmdData[25] 是低8位
+        m_memDeviceHeartBeat.m_nEncoderAngle = (m_vectorCmdData[24] << 8) + m_vectorCmdData[25];
+
 		m_function_DeviceHeartBeat(m_memDeviceHeartBeat);
 	}
 }

@@ -307,6 +307,8 @@ private:
 
 	bool m_bNeedChangePicInfo;
 
+	// 是否实在异常后处理一次
+	bool m_bNeedChangeEncodeMove;
 	std::vector<std::string> m_vectorReadedPicPath;
 
 	/// <summary>

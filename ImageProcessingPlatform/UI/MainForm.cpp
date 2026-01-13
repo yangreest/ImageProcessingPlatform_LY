@@ -1271,6 +1271,8 @@ void MainForm::BindAction()
 		});
 
 	connect(ui.pushButton_16, &QPushButton::clicked, this, &MainForm::On_Upgrade_DoubleClick);
+	connect(ui.pushButton_7, &QPushButton::clicked, this, &MainForm::On_TurnOnCamera_Click);
+	connect(ui.pushButton_12, &QPushButton::clicked, this, &MainForm::On_TurnOffCamera_Click);
 	//connect(ui.pushButton_25, &QPushButton::clicked, this, &MainForm::On_TurnOnCamera_Click);
 	//connect(ui.pushButton_17, &QPushButton::clicked, this, &MainForm::On_TurnOffCamera_Click);
 	connect(ui.pushButton_27, &QPushButton::clicked, this, &MainForm::On_ShowConfigFormClick);
@@ -1389,6 +1391,7 @@ void MainForm::InitParam()
 	m_pConfig = new CConfigManager();
 	m_pConfig->Read(WHSD_Tools::GetAbsolutePath("Config.xml"));
 	m_pLabel_Img = ui.lbImgUp;
+	m_bNeedChangeEncodeMove = false;
 
 	auto xRayResult = std::bind(&MainForm::Callback_XRaySendResult, this, std::placeholders::_1);
 
@@ -2581,6 +2584,21 @@ void MainForm::UpdateMotorRunStatus(const CDeviceHeartBeat& c)
 	ui.label_54->setText(c.m_cMainPowerSupply > 0 ? "开" : "关");
 	uint8_t cFmode = c.m_bFactoryMode ? 1 : 0;
 	ui.label_37->setText(QString::number(cFmode));
+	ui.lEAngleEncode->setText(QString::number(c.m_nEncoderAngle));
+
+	if (ui.lbMinEncode->text().toInt() < c.m_nEncoderAngle && c.m_nEncoderAngle < ui.lbMaxEncode->text().toInt() && m_bNeedChangeEncodeMove)
+	{
+		m_bNeedChangeEncodeMove = false;
+	}
+	else if (ui.lbMinEncode->text().toInt() > c.m_nEncoderAngle || c.m_nEncoderAngle > ui.lbMaxEncode->text().toInt())
+	{
+		if (!m_bNeedChangeEncodeMove)
+		{
+			// 停止射线机动作
+			On_Up_Release();
+			m_bNeedChangeEncodeMove = true;
+		}
+	}
 }
 
 void MainForm::UpdateOTAStatus()
@@ -3439,8 +3457,7 @@ void MainForm::On_OrgPoint_Click()
 	int speed = ui.comboBox_3->currentIndex();
 	auto cmds = CWHSDControlBoardProtocol::DeviceRun(0x01, 0b1, 0x01, speed);
 	m_apDeviceCom[0]->Write(cmds.data(), cmds.size());
-
-	cmds = CWHSDControlBoardProtocol::DeviceRun(0x02, 0b1, 0x01, speed);
+	cmds = CWHSDControlBoardProtocol::DeviceRun(0x05, 0b1, 0x01, 0x00);
 	m_apDeviceCom[0]->Write(cmds.data(), cmds.size());
 }
 

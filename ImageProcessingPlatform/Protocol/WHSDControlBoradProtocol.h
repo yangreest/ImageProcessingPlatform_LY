@@ -131,9 +131,14 @@ public:
 	uint8_t m_cMainPowerSupply;
 
 	/// <summary>
-	/// 是否为
+	/// 是否为工厂模式
 	/// </summary>
 	bool m_bFactoryMode;
+
+	/// <summary>
+	/// 编码器角度值
+	/// </summary>
+	int m_nEncoderAngle;
 
 	void ExtractMotorStatus(int motorType, const uint8_t* data);
 };
