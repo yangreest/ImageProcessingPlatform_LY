@@ -22,4 +22,6 @@ private:
 	std::string m_strLeftIp;
 	std::string m_strMidIp;
 	std::string m_strRightIp;
+
+	bool needBreak;
 };

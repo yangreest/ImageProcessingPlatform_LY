@@ -25,6 +25,11 @@ public:
 	/// </summary>
 	int m_nExposureType;
 
+	///	<summary>
+	/// 多设备类型 0-指定的是老型号，1指定新型号
+	/// <summary>
+	int m_nMultiBoardType;
+
 	/// <summary>
 	/// 曝光时间
 	/// </summary>

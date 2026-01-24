@@ -10,7 +10,7 @@ class CPZMultiMedical
 {
 public:
 	CPZMultiMedical();
-	bool Init(int nConfigType);
+	bool Init(int nConfigType,int nMultiBdTpye);
 	bool BeginWork();
 	bool EndWork();
 	void RegisterImgCallback(const std::function<void(uint8_t*, int, int, int,int)>& f);
@@ -32,6 +32,11 @@ private:
 	static int FuncImageCallBack(char nEvent);
 	static int FuncHeartBeatCallBack(char nEvent);
 
+	static int FuncLinkupCallBackEx(INT16 nEvent, char index);
+	static int FuncBreakCallBackEx(INT16 nEvent, char index);
+	static int FuncHeartBeatCallBackEx(INT16 nEvent, char index);
+	static int FuncImageCallBackEx(INT16 nEvent, char index);
+
 	static std::function<void(uint8_t*, int, int, int,int)> m_function_ImgCallBack;
 	static std::function<void(DeviceConnectStatus, int)> m_function_DeviceConnectStatusCallBack;
 	static std::function<void(DeviceRunStatus, int)> m_function_DeviceRunStatusCallBack;
@@ -41,6 +46,7 @@ private:
 	static bool m_bIsInited;
 	static bool m_bIsNeedExit;
 	static bool m_bSoftwareTrigger;
+	static int m_nMultiBdTpye;
 	static int m_nInitStatus;
 	static int8_t m_cFpCurStat;
 

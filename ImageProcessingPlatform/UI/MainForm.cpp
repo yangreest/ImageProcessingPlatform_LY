@@ -54,6 +54,7 @@ MainForm::~MainForm()
 	}
 	WHSD_Tools::SafeRelease(m_pMouseEventFilter);
 	WHSD_Tools::SafeRelease(m_pTimer);
+	WHSD_Tools::SafeRelease(m_pCameraFrom);
 	//SafeReleaseWithEndWork(m_pDeviceCom);
 	WHSD_Tools::SafeReleaseWithEndWork(m_pDeviceLog);
 }
@@ -79,7 +80,8 @@ void MainForm::slot_pBSampleBoardConnect_clicked()
 	if (m_pCPZMultiMedical == nullptr)
 	{
 		m_pCPZMultiMedical = new CPZMultiMedical();
-		if (!m_pCPZMultiMedical->Init(m_pConfig->m_memCSampleBoardConfig.m_nExposureType))
+		if (!m_pCPZMultiMedical->Init(m_pConfig->m_memCSampleBoardConfig.m_nExposureType,
+			m_pConfig->m_memCSampleBoardConfig.m_nMultiBoardType))
 		{
 			QMessageBox::critical(this, "错误", "初始化失败！", QMessageBox::Ok);
 			return;
@@ -1167,7 +1169,7 @@ void MainForm::BindAction()
 	connect(ui.pushButton_2, &QPushButton::clicked, this, &MainForm::ConnectDevice);
 	connect(ui.pBSampleBoardConnect, &QPushButton::clicked, this, &MainForm::slot_pBSampleBoardConnect_clicked);
 	//connect(ui.pBRefresh, &QPushButton::clicked, this, &MainForm::slot_pBRefresh_clicked);
-	//connect(ui.pBManuallyTest, &QPushButton::clicked, this, &MainForm::slot_pBManuallyTest_clicked);
+	connect(ui.pBManuallyTest, &QPushButton::clicked, this, &MainForm::slot_pBManuallyTest_clicked);
 	connect(ui.pBManuallyTrigger, &QPushButton::clicked, this, &MainForm::On_ManuallyTrigger_Clicked);
 	connect(ui.pBSwitchMode, &QPushButton::clicked, this, &MainForm::slot_pBSwitchMode_clicked);
 	connect(ui.pBSwitchMode_2, &QPushButton::clicked, this, &MainForm::slot_pBSwitchMode_2_clicked);
@@ -1198,12 +1200,20 @@ void MainForm::BindAction()
 			L_vector_ImgTag[i == 0 ? 1 : 0] = m_vector_ImgTag;
 			m_vector_ImgTag = L_vector_ImgTag[i];
 
-			if (m_pCPZMultiMedical != nullptr)
+			if (m_pCPZMultiMedical != nullptr
+				&& m_pConfig->m_memCSampleBoardConfig.m_nMultiBoardType == 0)
 			{
 				m_pCPZMultiMedical->SwitchToDevice(i);
 			}
+			
 			// 去除tabwidget的槽函数响应
 			ui.tabWidget->setCurrentIndex(i);
+			m_nCurrentIndex = i;
+
+			if (m_pConfig->m_memCSampleBoardConfig.m_nMultiBoardType == 1)
+			{
+				Callback_ShowImgOnLabel_2();
+			}
 			});
 
 	}
@@ -1329,6 +1339,8 @@ void MainForm::BindAction()
 	connect(ui.pushButton_26, &QPushButton::clicked, this, &MainForm::On_RecoverImgTag_Click);
 	connect(ui.pushButton_57, &QPushButton::clicked, this, &MainForm::On_deleteTag_Click);
 	connect(ui.pushButton_59, &QPushButton::clicked, this, &MainForm::On_SaveDealedPic);
+
+	connect(this, &MainForm::requestShowBubble, this, &MainForm::showBubble);
 }
 
 void MainForm::InitParam()
@@ -1419,7 +1431,7 @@ void MainForm::InitParam()
 			std::placeholders::_1,
 			std::placeholders::_2, std::placeholders::_3));
 		pWHSDControlBoardProtocol->RegisterXRaySendResult(xRayResult);
-		pWHSDControlBoardProtocol->RegisterSetEncoderZero(std::bind(&MainForm::Callback_SetEncoderZero,this));
+		pWHSDControlBoardProtocol->RegisterSetEncoderZero(std::bind(&MainForm::Callback_SetEncoderZero, this));
 		pDeviceCom->BeginWork();
 		pWHSDControlBoardProtocol->BeginWork();
 	}
@@ -1495,6 +1507,10 @@ void MainForm::Callback_GetSampleBoardValue(const DeviceValue v, const double d)
 
 void MainForm::Callback_GetMultiSampleBoardValue(const DeviceValue v, const double d, int index)
 {
+	if (index != m_nCurrentIndex)
+	{
+		return;
+	}
 	QLabel* pLabel = nullptr;
 	switch (v)
 	{
@@ -1542,7 +1558,7 @@ void MainForm::Callback_XRaySendResult(uint8_t re)
 void MainForm::Callback_SetEncoderZero()
 {
 	//给pushButton_60 设置提示气泡 
-    QToolTip::showText(ui.pushButton_60->mapToGlobal(QPoint(0, 0)), "编码器归零成功");
+	emit requestShowBubble();
 }
 
 bool MainForm::CheckPassword()
@@ -1578,9 +1594,9 @@ void MainForm::Callback_ShowImgOnLabel_2()
 	auto m_vector_LastImgBuffer = m_memSDRaw.GetOriginalRawData();
 	QImage image(m_vector_LastImgBuffer.data(), m_memSDRaw.m_wPicWidth, m_memSDRaw.m_wPicHeight,
 		m_memSDRaw.m_wPicWidth * sizeof(uint16_t),
-		QImage::Format_Grayscale16);
+		QImage::Format_Grayscale16);// 创建图片对象
 	m_memMainQImage = image.convertToFormat(QImage::Format_Grayscale16).scaled(m_pLabel_Img->size(), Qt::KeepAspectRatio,
-		Qt::SmoothTransformation);
+		Qt::SmoothTransformation);// 缩放图片
 	On_SliderValueChanged();
 	//PaintImg();
 }
@@ -1696,6 +1712,11 @@ void MainForm::On_SaveDealedPic()
 	}
 }
 
+void MainForm::showBubble()
+{
+	QToolTip::showText(ui.pushButton_60->mapToGlobal(QPoint(0, 0)), "编码器归零成功");
+}
+
 void MainForm::On_TurnOnAll_Click()
 {
 	auto cmds = CWHSDControlBoardProtocol::TurnOnAll();
@@ -1743,8 +1764,11 @@ void MainForm::On_Upgrade_DoubleClick()
 
 void MainForm::On_TurnOnCamera_Click()
 {
-	WHSD_Tools::SafeRelease(m_pCameraFrom);
-	m_pCameraFrom = new CameraFrom(m_pConfig);
+	if (m_pCameraFrom == nullptr)
+	{
+		WHSD_Tools::SafeRelease(m_pCameraFrom);
+		m_pCameraFrom = new CameraFrom(m_pConfig);
+	}
 	m_pCameraFrom->show();
 }
 
@@ -1752,9 +1776,9 @@ void MainForm::On_TurnOffCamera_Click()
 {
 	if (m_pCameraFrom != nullptr)
 	{
-		m_pCameraFrom->close();
+		m_pCameraFrom->hide();
 	}
-	WHSD_Tools::SafeRelease(m_pCameraFrom);
+
 	//m_pCameraFrom = nullptr;
 }
 
@@ -2607,6 +2631,11 @@ void MainForm::UpdateMotorRunStatus(const CDeviceHeartBeat& c)
 			m_bNeedChangeEncodeMove = true;
 		}
 	}
+
+	if (c.m_bLinkageStatus)
+	{
+		ui.checkBox->setChecked(true);
+	}
 }
 
 void MainForm::UpdateOTAStatus()
@@ -3170,11 +3199,25 @@ void MainForm::Callback_MultiSampleBoardNewImg(uint8_t* data, int width, int hei
 	std::string fileType;
 	auto dataLen = width * height * pixLen;
 	{
-		std::lock_guard<std::mutex> g(m_mutexLastImgMutex);
-		m_memSDRaw.SetOriginalRawData(data, dataLen);
-		m_memSDRaw.SetTempRawData(data, dataLen);
-		m_memSDRaw.m_wPicWidth = width;
-		m_memSDRaw.m_wPicHeight = height;
+		if (FPIndex != m_nCurrentIndex)
+		{
+			CSD_Raw temp;
+            temp.SetOriginalRawData(data, dataLen);
+            temp.SetTempRawData(data, dataLen);
+            temp.m_wPicWidth = width;
+            temp.m_wPicHeight = height;
+			m_SDRaw[FPIndex] = temp;
+		}
+		else
+		{
+			std::lock_guard<std::mutex> g(m_mutexLastImgMutex);
+			m_memSDRaw.SetOriginalRawData(data, dataLen);
+			m_memSDRaw.SetTempRawData(data, dataLen);
+			m_memSDRaw.m_wPicWidth = width;
+			m_memSDRaw.m_wPicHeight = height;
+
+		}
+		 
 		if (m_pConfig->m_memCImageProcessConfig.m_nRawFile == 0)
 		{
 			v = m_memSDRaw.GetSaveOriginalData();

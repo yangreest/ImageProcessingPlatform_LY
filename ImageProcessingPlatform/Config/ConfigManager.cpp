@@ -166,6 +166,12 @@ void CConfigManager::Read(const std::string& filePath)
 						m_memCSampleBoardConfig.m_nExposureType = nIntTemp;
 					}
 
+					auto nMultBdType = sb->FirstChildElement("MultBdType");
+					if (nMultBdType != nullptr && nMultBdType->QueryIntText(&nIntTemp) == tinyxml2::XML_SUCCESS)
+					{
+						m_memCSampleBoardConfig.m_nMultiBoardType = nIntTemp;
+					}
+
 					auto nExposureTime = sb->FirstChildElement("ExposureTime");
 					if (nExposureTime != nullptr && nExposureTime->QueryIntText(&nIntTemp) == tinyxml2::XML_SUCCESS)
 					{

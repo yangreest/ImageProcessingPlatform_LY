@@ -40,6 +40,7 @@ CameraFrom::CameraFrom(const CConfigManager* nConfig, QWidget* parent)
 
 CameraFrom::~CameraFrom()
 {
+	needBreak = true;
 	WHSD_Tools::SafeRelease(m_pC1);
 	WHSD_Tools::SafeRelease(m_pC2);
 	WHSD_Tools::SafeRelease(m_pC3);
@@ -48,7 +49,7 @@ CameraFrom::~CameraFrom()
 void CameraFrom::Connect()
 {
 	int initStatus = 0;
-	bool needBreak = false;
+	needBreak = false;
 	while (true)
 	{
 		if (needBreak)

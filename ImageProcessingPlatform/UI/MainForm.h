@@ -128,10 +128,13 @@ private slots:
 	void On_deleteTag_Click();
 
 	void On_SaveDealedPic();
+
+	void showBubble();
 signals:
 	void On_Pic_Receive();
 	void On_OnLineLoadSuccess();
 	void On_OnLineLoadFailed();
+	void requestShowBubble();
 
 protected:
 	// 重写显示事件
@@ -383,5 +386,7 @@ private:
 
 	// 临时保存到变量，用于切换图像显示
 	QLabel* m_pLabel_Img; // 当前指定的lable图像显示控件 0 = 上方图像，1= 下方图像
+
+	int m_nCurrentIndex; //当前的采像板序号
 
 };

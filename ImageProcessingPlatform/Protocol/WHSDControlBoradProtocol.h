@@ -140,6 +140,11 @@ public:
 	/// </summary>
 	int m_nEncoderAngle;
 
+	/// <summary>
+	/// 联动状态
+	/// </summary>
+	bool m_bLinkageStatus;
+
 	void ExtractMotorStatus(int motorType, const uint8_t* data);
 };
 

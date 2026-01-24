@@ -623,7 +623,7 @@ void CWHSDControlBoardProtocol::DealHeartBeat()
 		m_memDeviceHeartBeat.m_bFactoryMode = TOOLS_GET_BIT(m_vectorCmdData[23], 0) > 0;
 		//m_vectorCmdData[24] 是高8位，m_vectorCmdData[25] 是低8位
         m_memDeviceHeartBeat.m_nEncoderAngle = (m_vectorCmdData[24] << 8) + m_vectorCmdData[25];
-
+		m_memDeviceHeartBeat.m_bLinkageStatus = TOOLS_GET_BIT(m_vectorCmdData[26], 0) > 0;
 		m_function_DeviceHeartBeat(m_memDeviceHeartBeat);
 	}
 }

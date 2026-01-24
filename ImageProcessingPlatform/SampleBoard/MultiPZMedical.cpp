@@ -10,6 +10,7 @@
 #include <cstring>
 #include <vector>
 #include <thread>
+#include <Tools/Tools.h>
 
 #define FPDTOTALNUM 2   //total number of FPD
 
@@ -36,6 +37,7 @@ bool CPZMultiMedical::m_bIsInited = false;
 bool CPZMultiMedical::m_bLinked = false;
 bool CPZMultiMedical::m_bIsNeedExit = false;
 bool CPZMultiMedical::m_bSoftwareTrigger = false;
+int CPZMultiMedical::m_nMultiBdTpye = 0;
 int8_t CPZMultiMedical::m_cFpCurStat = 0;
 int CPZMultiMedical::m_nInitStatus = 0;
 
@@ -44,23 +46,36 @@ CPZMultiMedical::CPZMultiMedical()
 	m_bIsNeedExit = false;
 }
 
-bool CPZMultiMedical::Init(int nConfigType)
+bool CPZMultiMedical::Init(int nConfigType, int nMultiBdTpye)
 {
 	m_bSoftwareTrigger = nConfigType > 0;
+	m_nMultiBdTpye = nMultiBdTpye;
 	if (m_bIsInited)
 	{
 		return false;
 	}
-	COM_RegisterEvCallBack(EVENT_LINKUP, FuncLinkCallBack);
-	COM_RegisterEvCallBack(EVENT_LINKDOWN, FuncBreakCallBack);
-	COM_RegisterEvCallBack(EVENT_IMAGEVALID, FuncImageCallBack);
-	COM_RegisterEvCallBack(EVENT_HEARTBEAT, FuncHeartBeatCallBack);
+	
+	if (m_nMultiBdTpye == 1)
+	{
+		COM_RegisterEvCallBackEx(EVENT_LINKUP, FuncLinkupCallBackEx);
+		COM_RegisterEvCallBackEx(EVENT_LINKDOWN, FuncBreakCallBackEx);
+		COM_RegisterEvCallBackEx(EVENT_HEARTBEAT, FuncHeartBeatCallBackEx);
+		COM_RegisterEvCallBackEx(EVENT_IMAGEVALID, FuncImageCallBackEx);
+	}
+	else
+	{
+		COM_RegisterEvCallBack(EVENT_LINKUP, FuncLinkCallBack);
+		COM_RegisterEvCallBack(EVENT_LINKDOWN, FuncBreakCallBack);
+		COM_RegisterEvCallBack(EVENT_IMAGEVALID, FuncImageCallBack);
+		COM_RegisterEvCallBack(EVENT_HEARTBEAT, FuncHeartBeatCallBack);
+
+	}
 
 	if (COM_Init())
 	{
+		//if (COM_SetCalibMode(IMG_CALIB_GAIN | IMG_CALIB_DEFECT))
 		if (COM_SetCalibMode(6))
 		{
-
 			m_bIsInited = true;
 		}
 	}
@@ -100,6 +115,10 @@ bool CPZMultiMedical::BeginWork()
 
 	if (COM_SetCalibMode(IMG_CALIB_GAIN | IMG_CALIB_DEFECT))
 	{
+		if (m_nMultiBdTpye == 1)
+		{
+			return true;
+		}
 		m_nInitStatus = 0;
 		std::cout << "Calibration mode set successfully, starting connection loop" << std::endl;
 		std::thread td(LoopAutoConnect);
@@ -236,31 +255,23 @@ bool CPZMultiMedical::ManuallyTrigger()
 bool CPZMultiMedical::ManuallyTest()
 {
 	// 测试执行所有的槽函数
-	if (m_function_DeviceRunStatusCallBack != nullptr)
+	if (m_function_ImgCallBack != nullptr)
 	{
-		m_function_DeviceRunStatusCallBack(DeviceRunStatus::Awake, 0);
-		m_function_DeviceRunStatusCallBack(DeviceRunStatus::Awake, 1);
-	}
-	if (m_function_DeviceValueCallBack != nullptr)
-	{
-		m_function_DeviceValueCallBack(DeviceValue::Battery, 98.0, 0);
-		m_function_DeviceValueCallBack(DeviceValue::Battery, 97.0, 1);
-		m_function_DeviceValueCallBack(DeviceValue::Temperature, 22.5, 0);
-		m_function_DeviceValueCallBack(DeviceValue::Temperature, 23.5, 1);
-		m_function_DeviceValueCallBack(DeviceValue::Wifi, 16.0, 0);
-		m_function_DeviceValueCallBack(DeviceValue::Wifi, 17.0, 1);
-	}
-	if (m_function_DeviceConnectStatusCallBack != nullptr)
-	{
-		m_function_DeviceConnectStatusCallBack(DeviceConnectStatus::UnKnown, 0);
-		m_function_DeviceConnectStatusCallBack(DeviceConnectStatus::UnKnown, 1);
-	}
-	if (m_function_DevicSNCallBack != nullptr)
-	{
-		m_function_DevicSNCallBack("PZ_SN_1", 0);
-		m_function_DevicSNCallBack("PZ_SN_2", 1);
-	}
+		std::vector<uint8_t> buf;
+		std::string utf8_str = "D:\\GitHub\\ImageProcessingPlatform_LY\\RunDir\\AutoSave\\20260116\\20260116_122234.raw";
+		if (WHSD_Tools::ReadFileToVector(utf8_str, &buf))
+		{
+			m_function_ImgCallBack(buf.data(), 2560, 3072, sizeof(UINT16), 0);
+		}
 
+		std::vector<uint8_t> buf1;
+		utf8_str = "D:\\GitHub\\ImageProcessingPlatform_LY\\RunDir\\AutoSave\\20260116\\20260116_124058.raw";
+		if (WHSD_Tools::ReadFileToVector(utf8_str, &buf1))
+		{
+			m_function_ImgCallBack(buf1.data(), 2560, 3072, sizeof(UINT16), 1);
+		}
+	}
+	
 	return true;
 }
 
@@ -394,6 +405,117 @@ int CPZMultiMedical::FuncHeartBeatCallBack(char nEvent)
 		//double humValue = double(tFPStat.tFpTempHum.Hum) / 10;
 		m_function_DeviceValueCallBack(DeviceValue::Temperature, tFPStat.tFpTempHum.Temp / 10, index);
 		m_function_DeviceValueCallBack(DeviceValue::Wifi, tFPStat.tWifiStatus.ucSignal_level, index);
+	}
+	return 0;
+}
+
+int CPZMultiMedical::FuncLinkupCallBackEx(INT16 nEvent, char index)
+{
+
+	CHAR acSnTmp[32] = { '\0' };
+	COM_GetFPsnEx(index, acSnTmp);
+
+	std::cout << "FPsn:" << acSnTmp << ",index = " << (int)index << "connected!" << std::endl;
+	std::string snString(acSnTmp);
+	m_function_DevicSNCallBack(snString, (int)index);
+	if (m_function_DeviceConnectStatusCallBack != nullptr)
+	{
+		m_function_DeviceConnectStatusCallBack(DeviceConnectStatus::Connected, (int)index);
+	}
+	CHAR* csn = acSnTmp;
+	COM_Open(csn);
+	COM_AedAcqEx(index);
+	return 0;
+}
+
+int CPZMultiMedical::FuncBreakCallBackEx(INT16 nEvent, char index)
+{
+	m_bLinked = false;
+	m_nInitStatus = 0;
+
+
+	CHAR acSn[32] = { '\0' };
+	COM_GetFPsnEx(index, acSn);
+	std::cout << "FPsn:" << acSn << ",index = " << (int)index << "disconnected!" << std::endl;
+
+	if (m_function_DeviceConnectStatusCallBack != nullptr)
+	{
+		m_function_DeviceConnectStatusCallBack(DeviceConnectStatus::Closed, (int)index);
+	}
+	return 0;
+}
+
+int CPZMultiMedical::FuncHeartBeatCallBackEx(INT16 nEvent, char index)
+{
+	m_cFpCurStat = COM_GetFPCurStatusEx(index);
+	TFPStat tFPStat = { 0 };
+	CHAR acSn[32] = { '\0' };
+	COM_GetFPsnEx(index, acSn);
+	COM_GetFPStatusEx(&tFPStat, index);
+
+	std::string auctmp = "Sn:";
+	auctmp += acSn;
+
+	if (m_function_DeviceRunStatusCallBack != nullptr)
+	{
+		switch (m_cFpCurStat)
+		{
+		case STATUS_IDLE:
+		{
+			m_function_DeviceRunStatusCallBack(DeviceRunStatus::Awake, (int)index);
+			if (!m_bSoftwareTrigger)
+			{
+				m_nInitStatus = 2;
+			}
+			break;
+		}
+		case STATUS_HST:
+		case STATUS_AED1:
+		case STATUS_AED2:
+		{
+			m_function_DeviceRunStatusCallBack(DeviceRunStatus::Ready, (int)index);
+			break;
+		}
+		default:
+		{
+			m_function_DeviceRunStatusCallBack(DeviceRunStatus::Unknow, (int)index);
+			break;
+		}
+		}
+	}
+	if (m_function_DeviceValueCallBack != nullptr)
+	{
+		if (0 != (tFPStat.tBatInfo1.full + tFPStat.tBatInfo2.full))
+		{
+			double value = 100 * (tFPStat.tBatInfo1.Remain + tFPStat.tBatInfo2.Remain) / (tFPStat.tBatInfo1.full +
+				tFPStat.tBatInfo2.full);
+			m_function_DeviceValueCallBack(DeviceValue::Battery, value, (int)index);
+		}
+		//double humValue = double(tFPStat.tFpTempHum.Hum) / 10;
+		m_function_DeviceValueCallBack(DeviceValue::Temperature, tFPStat.tFpTempHum.Temp / 10, (int)index);
+		m_function_DeviceValueCallBack(DeviceValue::Wifi, tFPStat.tWifiStatus.ucSignal_level, (int)index);
+	}
+	std::cout << "FPsn:" << acSn << ",index = " << (int)index << "heartbeat!" << std::endl;
+	return 0;
+}
+
+int CPZMultiMedical::FuncImageCallBackEx(INT16 nEvent, char index)
+{
+
+	std::cout << "PZ FuncImageCallBackEx" << "Index = " << index << std::endl;
+	TImageMode tImageMode;
+	COM_GetImageModeEx(&tImageMode,index);
+	auto u16ImgRow = tImageMode.usRow;
+	auto u16ImgCol = tImageMode.usCol;
+	if (m_vector_ImgBuffer.size() != u16ImgRow * u16ImgCol * sizeof(UINT16))
+	{
+		m_vector_ImgBuffer.resize(u16ImgRow * u16ImgCol * sizeof(UINT16));
+	}
+	COM_GetImageEx((CHAR*)m_vector_ImgBuffer.data(), index);
+
+	if (m_function_ImgCallBack != nullptr)
+	{
+		m_function_ImgCallBack(m_vector_ImgBuffer.data(), u16ImgCol, u16ImgRow, sizeof(UINT16), index);
 	}
 	return 0;
 }
